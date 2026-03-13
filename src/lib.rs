@@ -1,5 +1,4 @@
 use std::clone::Clone;
-use std::fmt::format;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 // TODO:
@@ -52,12 +51,23 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
         None
     }
 
-    pub fn delete(&mut self, key: &K) -> Result<(), String> {
-        todo!()
+    pub fn delete(&mut self, key: &K) -> Result<(), &str> {
+        let idx = self.hash(key);
+        let bucket = &mut self.buckets[idx];
+        match bucket.iter().position(|(k, _)| k == key) {
+            Some(i) => {
+                bucket.remove(i);
+                Ok(())
+            }
+            None => Err("Key not found in hashtable"),
+        }
     }
 
     pub fn contains(&self, key: &K) -> bool {
-        todo!()
+        match self.get(key) {
+            Some(_) => true,
+            None => false,
+        }
     }
 
     fn resize(&mut self) {
@@ -68,6 +78,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn hash_deterministic() {
@@ -84,8 +95,58 @@ mod test {
         let key = "a".to_string();
         let value = 1;
 
-        ht.put(key, value);
+        ht.put(key.clone(), value);
 
-        assert_eq!(value, ht.get(&"a".to_string()).unwrap());
+        assert_eq!(value, ht.get(&key).unwrap());
+    }
+
+    #[test]
+    fn delete_contains() {
+        let mut ht = HashTable::<String, i32>::new(10);
+        let key = "a".to_string();
+        let value = 1;
+
+        ht.put(key.clone(), value);
+        assert!(ht.contains(&key));
+
+        let _ = ht.delete(&key);
+        assert!(!ht.contains(&key));
+    }
+
+    #[test]
+    fn update() {
+        let mut ht = HashTable::<String, i32>::new(10);
+        let key = "a".to_string();
+        let value = 1;
+
+        ht.put(key.clone(), value);
+        ht.put(key.clone(), value);
+        assert!(ht.contains(&key));
+
+        let contains_duplicate = {
+            let mut seen = HashSet::new();
+            
+            let idx = ht.hash(&key);
+            let bucket = &ht.buckets[idx];
+
+            let mut res = false;
+
+            for (k, _) in bucket {
+                if !seen.insert(k) {
+                    res = true;
+                    break;
+                }
+            }
+            res
+        };
+
+        assert!(!contains_duplicate);        
+    }
+
+    #[test]
+    #[should_panic]
+    fn delete_invalid() {
+        let mut ht = HashTable::<String, i32>::new(10);
+        ht.delete(&"a".to_string()).unwrap();
     }
 }
