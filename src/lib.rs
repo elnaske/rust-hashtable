@@ -42,7 +42,6 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
         let idx = self.hash(key);
         let bucket = &self.buckets[idx];
 
-        // could probably be rewritten functionally
         for (k, v) in bucket {
             if k == key {
                 return Some(v.clone());
@@ -70,6 +69,17 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
         }
     }
 
+    pub fn keys(&self) -> Vec<K> {
+        let mut res: Vec<K> = Vec::new();
+
+        for bucket in &self.buckets {
+            for (key, _) in bucket {
+                res.push(key.clone());
+            }
+        }
+        res
+    }
+
     fn resize(&mut self) {
         todo!()
     }
@@ -78,7 +88,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::collections::HashSet;
+    use std::{collections::HashSet, vec};
 
     #[test]
     fn hash_deterministic() {
@@ -148,5 +158,19 @@ mod test {
     fn delete_invalid() {
         let mut ht = HashTable::<String, i32>::new(10);
         ht.delete(&"a".to_string()).unwrap();
+    }
+
+    #[test]
+    fn get_keys() {
+        let mut ht = HashTable::<String, i32>::new(10);
+        ht.put("a".to_string(), 1);
+        ht.put("b".to_string(), 2);
+        ht.put("b".to_string(), 3);
+        ht.put("c".to_string(), 3);
+
+        let mut keys = ht.keys();
+        keys.sort();
+        let reference = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        assert_eq!(keys, reference);
     }
 }
