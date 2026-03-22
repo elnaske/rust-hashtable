@@ -8,7 +8,7 @@ pub struct HashTable<K: Hash, V> {
     buckets: Vec<Vec<(K, V)>>,
     count: usize,
 }
-impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
+impl<K: Clone + Hash + Eq, V: Clone> HashTable<K, V> {
     pub fn new(size: usize) -> Self {
         HashTable {
             buckets: vec![Vec::<(K, V)>::new(); size],
@@ -54,6 +54,13 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
         None
     }
 
+    pub fn get_or_else(&self, key: &K, default: V) -> V {
+        match self.get(key) {
+            Some(v) => v,
+            None => default,
+        }
+    }
+
     pub fn delete(&mut self, key: &K) -> Result<(), &str> {
         let idx = self.hash(key);
         let bucket = &mut self.buckets[idx];
@@ -61,6 +68,7 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
         match bucket.iter().position(|(k, _)| k == key) {
             Some(i) => {
                 bucket.remove(i);
+                self.count -= 1;
                 Ok(())
             }
             None => Err("Key not found in hashtable"),
@@ -100,6 +108,23 @@ impl<K: Clone + Hash + PartialEq, V: Clone> HashTable<K, V> {
         }
 
         *self = new_table;
+    }
+}
+impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HashTable<K, V> {
+    pub fn equals(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+
+        for bucket in &self.buckets {
+            for (k, v) in bucket {
+                match other.get(&k) {
+                    Some(val) if val == *v => {},
+                    _ => return false,
+                }
+            }
+        }
+        true
     }
 }
 
@@ -201,5 +226,41 @@ mod test {
         
         ht.put("b".to_string(), 2);
         assert_eq!(ht.buckets.len(), 4);
+    }
+
+    #[test]
+    fn len() {
+        let mut ht = HashTable::<String, i32>::new(10);
+        ht.put("a".to_string(), 1);
+        assert_eq!(ht.len(), 1);
+
+        ht.put("b".to_string(), 1);
+        assert_eq!(ht.len(), 2);
+        
+        ht.put("b".to_string(), 2);
+        assert_eq!(ht.len(), 2);
+        
+        let _ = ht.delete(&"b".to_string());
+        assert_eq!(ht.len(), 1);
+    }
+
+    #[test]
+    fn equals() {
+        let mut ht_1 = HashTable::<String, i32>::new(10);
+        ht_1.put("a".to_string(), 1);
+        
+        let mut ht_2 = HashTable::<String, i32>::new(10);
+        ht_2.put("b".to_string(), 1);
+
+        assert!(!ht_1.equals(&ht_2));
+
+        ht_2.put("a".to_string(), 2);
+        let _ = ht_2.delete(&"b".to_string());
+
+        assert!(!ht_1.equals(&ht_2));
+
+        ht_2.put("a".to_string(), 1);
+
+        assert!(ht_1.equals(&ht_2));
     }
 }
