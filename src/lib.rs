@@ -1,8 +1,6 @@
 use std::clone::Clone;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-// TODO:
-// - make buckets linked lists instead of vectors
 #[derive(Debug)]
 pub struct HashTable<K: Hash, V> {
     buckets: Vec<Vec<(K, V)>>,
@@ -76,10 +74,7 @@ impl<K: Clone + Hash + Eq, V: Clone> HashTable<K, V> {
     }
 
     pub fn contains(&self, key: &K) -> bool {
-        match self.get(key) {
-            Some(_) => true,
-            None => false,
-        }
+        self.get(key).is_some()
     }
 
     pub fn keys(&self) -> Vec<K> {
@@ -95,6 +90,10 @@ impl<K: Clone + Hash + Eq, V: Clone> HashTable<K, V> {
 
     pub fn len(&self) -> usize {
         self.count
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
     }
 
     fn resize(&mut self) {
@@ -118,7 +117,7 @@ impl<K: Clone + Hash + Eq, V: Clone + PartialEq> HashTable<K, V> {
 
         for bucket in &self.buckets {
             for (k, v) in bucket {
-                match other.get(&k) {
+                match other.get(k) {
                     Some(val) if val == *v => {},
                     _ => return false,
                 }
